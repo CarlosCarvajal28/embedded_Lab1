@@ -1,12 +1,8 @@
 #include <zephyr.h>
-
-void main(void)
-{
-}
-#include <zephyr.h>
 #include <device.h>
 #include <devicetree.h>
 #include <drivers/gpio.h>
+#include "blink.h"
 
 #define LED0_NODE DT_ALIAS(led0)
 #define LED1_NODE DT_ALIAS(led1)
@@ -33,23 +29,20 @@ void main(void)
 
 struct k_thread coop_thread;
 K_THREAD_STACK_DEFINE(coop_stack, STACKSIZE);
-int counter;
-bool led_is_on;
 
 void thread_entry(void)
 {
+    int counter, led_state;
     const struct device *dev;
-    dev = device_get_binding(LED1);
-    bool led_is_on = true;
-	int ret = gpio_pin_configure(dev, PIN0, GPIO_OUTPUT_ACTIVE | FLAGS0);
+
+    dev = device_get_binding(LED0);
+    second_thread_setup(dev, PIN0, FLAGS0, &counter);
 
 	struct k_timer t;
 	k_timer_init(&t, NULL, NULL);
 
 	while (1) {
-        counter = counter + 1;
-        led_is_on = !led_is_on;
-		gpio_pin_set(dev, PIN1, (int)led_is_on);
+        led_state = second_thread_iteration(dev, PIN0, led_state, &counter);
 		k_timer_start(&t, K_MSEC(2000), K_NO_WAIT);
 		k_timer_status_sync(&t);
 	}
@@ -58,11 +51,9 @@ void thread_entry(void)
 void main(void)
 {
 	const struct device *dev;
-	led_is_on = true;
-	int ret;
+	dev = device_get_binding(LED1);
 
-	dev = device_get_binding(LED0);
-
+	led_is_on = main_thread_setup(dev, PIN1, FLAGS1);
     k_thread_create(&coop_thread,
                     coop_stack,
                     STACKSIZE,
@@ -73,19 +64,10 @@ void main(void)
                     K_PRIO_COOP(7),
                     0,
                     K_NO_WAIT);
-
-	if (dev == NULL) {
-		return;
-	}
-
-	ret = gpio_pin_configure(dev, PIN0, GPIO_OUTPUT_ACTIVE | FLAGS0);
-	if (ret < 0) {
-		return;
-	}
-
+    //believe this turns LED on/off as well but depending on main thread
+    //then sleeps for 500 ms
 	while (1) {
-		led_is_on = !led_is_on;
-		gpio_pin_set(dev, PIN0, (int)led_is_on);
-		k_msleep(500);
+        led_is_on = main_thread_iteration(dev, PIN1, led_is_on);
+        k_msleep(500);
 	}
 }
