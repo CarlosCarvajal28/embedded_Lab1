@@ -41,6 +41,7 @@ void thread_entry(void)
 	struct k_timer t;
 	k_timer_init(&t, NULL, NULL);
 
+	//switches LED on/off, then waits 500 ms in a separate thread from main
 	while (1) {
         counter = counter + 1;
         led_is_on = !led_is_on;
