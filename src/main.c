@@ -32,7 +32,8 @@ K_THREAD_STACK_DEFINE(coop_stack, STACKSIZE);
 
 void thread_entry(void)
 {
-    int counter, led_state;
+    int counter;
+    int led_state = 0;
     const struct device *dev;
 
     dev = device_get_binding(LED0);
@@ -50,6 +51,7 @@ void thread_entry(void)
 
 void main(void)
 {
+    int led_is_on = 0;
 	const struct device *dev;
 	dev = device_get_binding(LED1);
 
